@@ -2,16 +2,28 @@ extern crate rand;
 extern crate ansi_term;
 
 #[derive(Copy, Clone, PartialEq)]
-pub enum Tile {
+enum State {
   Empty,
   Tree,
   Burning,
   Heating,
 }
 
+#[derive(Copy, Clone)]
+struct Point {
+  x: isize,
+  y: isize,
+}
+
+#[derive(Copy, Clone)]
+struct Tile {
+  coords: Point,
+  state: State,
+}
+
 impl fmt::Display for Tile {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let output = match *self {
+    let output = match self.state {
       Empty => Black.paint(" "),
       Tree => Green.bold().paint("T"),
       Burning => Red.bold().paint("B"),
@@ -29,7 +41,7 @@ const FOREST_WIDTH: usize = 90;
 const FOREST_HEIGHT: usize = 45;
 
 const MAX_GENERATIONS: u32 = 1000;
-const SLEEP_MILLIS: u64 = 50;
+const SLEEP_MILLIS: u64 = 5;
 
 use std::fmt;
 use std::io;
@@ -41,16 +53,16 @@ use std::process::Command;
 use std::time::Duration;
 use ansi_term::Colour::*;
 
-use Tile::{Empty, Tree, Burning, Heating};
+use State::{Empty, Tree, Burning, Heating};
 
 fn main() {
   let sleep_duration = Duration::from_millis(SLEEP_MILLIS);
 
-  let mut forest_1 = [[Tile::Empty; FOREST_WIDTH]; FOREST_HEIGHT];
-  let mut forest_2 = [[Tile::Empty; FOREST_WIDTH]; FOREST_HEIGHT];
-
+  let mut forest_1 = [[ Tile { coords: Point { x: 0, y: 0 }, state: Empty } ; FOREST_WIDTH]; FOREST_HEIGHT];
+  let mut forest_2 = [[ Tile { coords: Point { x: 0, y: 0 }, state: Empty } ; FOREST_WIDTH]; FOREST_HEIGHT];
 
   generate_forest(&mut forest_1);
+
   print_forest(forest_1, 0);
 
   let mut current_forest = &mut forest_1;
@@ -60,13 +72,13 @@ fn main() {
 
     for x in 0..FOREST_WIDTH {
       for y in 0..FOREST_HEIGHT {
-        next_forest[y][x] = update_tree(current_forest[y][x]);
+        next_forest[y][x].state = update_tree(current_forest[y][x]);
       }
     }
 
     for x in 0..FOREST_WIDTH {
       for y in 0..FOREST_HEIGHT {
-        if next_forest[y][x] == Burning {
+        if next_forest[y][x].state == Burning {
           heat_neighbors(&mut next_forest, y, x);
         }
       }
@@ -79,16 +91,16 @@ fn main() {
   }
 }
 
-fn generate_forest(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT]) {
+fn generate_forest(forest: &mut [[ Tile; FOREST_WIDTH]; FOREST_HEIGHT]) {
   for row in forest.iter_mut() {
-    for tree in row.iter_mut() {
-      *tree = if prob_check(INITIAL_TREE_PROB) { Tree } else { Empty } ;
+    for tile in row.iter_mut() {
+      tile.state = if prob_check(INITIAL_TREE_PROB) { Tree } else { Empty } ;
     }
   }
 }
 
-fn update_tree(tree: Tile) -> Tile {
-  match tree {
+fn update_tree(tree: Tile) -> State{
+  match tree.state {
     Empty => {
       if prob_check(GROW_PROB) == true {
         Tree
@@ -126,9 +138,9 @@ fn heat_neighbors(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], y: usize, 
        nx < FOREST_WIDTH as i32 &&
        ny >= 0 &&
        ny < FOREST_HEIGHT as i32 &&
-       forest[ny as usize][nx as usize] == Tree
+       forest[ny as usize][nx as usize].state == Tree
     {
-      forest[ny as usize][nx as usize] =  Heating
+      forest[ny as usize][nx as usize].state =  Heating
     }
   }
 }
