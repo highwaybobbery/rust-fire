@@ -45,16 +45,14 @@ use Tile::{Empty, Tree, Burning, Heating};
 
 fn main() {
   let sleep_duration = Duration::from_millis(SLEEP_MILLIS);
-  std::thread::sleep(sleep_duration);
-
   let mut forest = [[Tile::Empty; FOREST_WIDTH]; FOREST_HEIGHT];
 
   generate_forest(&mut forest);
   print_forest(&mut forest, 0);
 
   for generation in 1..MAX_GENERATIONS {
-    for x in 0..FOREST_WIDTH {
-      for y in 0..FOREST_HEIGHT {
+    for y in 0..FOREST_WIDTH {
+      for x in 0..FOREST_HEIGHT {
         forest[y][x] = update_tree(forest[y][x]);
       }
     }
@@ -66,6 +64,7 @@ fn main() {
         }
       }
     }
+
     print_forest(&mut forest, generation);
     std::thread::sleep(sleep_duration);
   }
@@ -128,7 +127,7 @@ fn heat_neighbors(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], y: usize, 
 fn print_forest(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], generation: u32) {
   let mut writer = BufWriter::new(io::stdout());
   clear_screen(&mut writer);
-  writeln!(writer, "------------ Generation: {} ----------------", generation).unwrap();
+  writeln!(writer, "Generation: {}", generation + 1).unwrap();
   for row in forest.iter() {
     for tree in row.iter() {
       write!(writer, "{}", tree).unwrap();
