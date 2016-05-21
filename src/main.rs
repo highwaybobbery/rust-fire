@@ -9,16 +9,29 @@ pub enum Tile {
   Heating,
 }
 
+impl fmt::Display for Tile {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let output = match *self {
+      Empty => Black.paint(" "),
+      Tree => Green.bold().paint("T"),
+      Burning => Red.bold().paint("B"),
+      Heating => Yellow.bold().paint("T"),
+    };
+    write!(f, "{}", output)
+  }
+}
+
 const GROW_PROB: f32 = 0.005;
-const INITIAL_TREE_PROB: f32 = 0.5;
+const INITIAL_TREE_PROB: f32 = 0.00;
 const FIRE_PROB: f32 = 0.0001;
 
-const FOREST_WIDTH: usize = 60;
-const FOREST_HEIGHT: usize = 30;
+const FOREST_WIDTH: usize = 90;
+const FOREST_HEIGHT: usize = 45;
 
-const MAX_GENERATIONS: u32 = 900;
-const SLEEP_MILLIS: u64 = 3;
+const MAX_GENERATIONS: u32 = 1000;
+const SLEEP_MILLIS: u64 = 10;
 
+use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::io::BufWriter;
@@ -32,6 +45,7 @@ use Tile::{Empty, Tree, Burning, Heating};
 
 fn main() {
   let sleep_duration = Duration::from_millis(SLEEP_MILLIS);
+  std::thread::sleep(sleep_duration);
 
   let mut forest = [[Tile::Empty; FOREST_WIDTH]; FOREST_HEIGHT];
 
@@ -100,13 +114,13 @@ fn heat_neighbors(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], y: usize, 
   for &(xoff, yoff) in neighbors.iter() {
     let nx: i32 = (x as i32) + xoff;
     let ny: i32 = (y as i32) + yoff;
-    if (nx >= 0 &&
-        nx < FOREST_WIDTH as i32 &&
-        ny >= 0 &&
-        ny < FOREST_HEIGHT as i32 &&
-        forest[ny as usize][nx as usize] == Tree
-       ) {
-          forest[ny as usize][nx as usize] =  Heating
+    if nx >= 0 &&
+       nx < FOREST_WIDTH as i32 &&
+       ny >= 0 &&
+       ny < FOREST_HEIGHT as i32 &&
+       forest[ny as usize][nx as usize] == Tree
+    {
+      forest[ny as usize][nx as usize] =  Heating
     }
   }
 }
@@ -117,20 +131,10 @@ fn print_forest(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], generation: 
   writeln!(writer, "------------ Generation: {} ----------------", generation).unwrap();
   for row in forest.iter() {
     for tree in row.iter() {
-      print_tree(*tree, &mut writer);
+      write!(writer, "{}", tree).unwrap();
     }
     writer.write(b"\n").unwrap();
   }
-}
-
-fn print_tree(tile: Tile, writer: &mut BufWriter<Stdout>) {
-  let output = match tile {
-    Empty => Black.paint(" "),
-    Tree => Green.bold().paint("T"),
-    Burning => Red.bold().paint("B"),
-    Heating => Yellow.bold().paint("T"),
-  };
-  write!(writer, "{}", output).unwrap();
 }
 
 fn prob_check(chance: f32) -> bool {
