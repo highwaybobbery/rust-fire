@@ -21,15 +21,15 @@ impl fmt::Display for Tile {
   }
 }
 
-const GROW_PROB: f32 = 0.005;
-const INITIAL_TREE_PROB: f32 = 0.00;
-const FIRE_PROB: f32 = 0.0001;
+const GROW_PROB: f32 = 0.01;
+const INITIAL_TREE_PROB: f32 = 0.5;
+const FIRE_PROB: f32 = 0.001;
 
 const FOREST_WIDTH: usize = 90;
 const FOREST_HEIGHT: usize = 45;
 
 const MAX_GENERATIONS: u32 = 1000;
-const SLEEP_MILLIS: u64 = 10;
+const SLEEP_MILLIS: u64 = 50;
 
 use std::fmt;
 use std::io;
@@ -45,27 +45,36 @@ use Tile::{Empty, Tree, Burning, Heating};
 
 fn main() {
   let sleep_duration = Duration::from_millis(SLEEP_MILLIS);
-  let mut forest = [[Tile::Empty; FOREST_WIDTH]; FOREST_HEIGHT];
 
-  generate_forest(&mut forest);
-  print_forest(&mut forest, 0);
+  let mut forest_1 = [[Tile::Empty; FOREST_WIDTH]; FOREST_HEIGHT];
+  let mut forest_2 = [[Tile::Empty; FOREST_WIDTH]; FOREST_HEIGHT];
+
+
+  generate_forest(&mut forest_1);
+  print_forest(forest_1, 0);
+
+  let mut current_forest = &mut forest_1;
+  let mut next_forest = &mut forest_2;
 
   for generation in 1..MAX_GENERATIONS {
-    for y in 0..FOREST_WIDTH {
-      for x in 0..FOREST_HEIGHT {
-        forest[y][x] = update_tree(forest[y][x]);
+
+    for x in 0..FOREST_WIDTH {
+      for y in 0..FOREST_HEIGHT {
+        next_forest[y][x] = update_tree(current_forest[y][x]);
       }
     }
 
-    for y in 0..FOREST_HEIGHT {
-      for x in 0..FOREST_WIDTH {
-        if forest[y][x] == Burning {
-          heat_neighbors(&mut forest, y, x);
+    for x in 0..FOREST_WIDTH {
+      for y in 0..FOREST_HEIGHT {
+        if next_forest[y][x] == Burning {
+          heat_neighbors(&mut next_forest, y, x);
         }
       }
     }
 
-    print_forest(&mut forest, generation);
+    print_forest(*next_forest, generation);
+
+    std::mem::swap(&mut current_forest, &mut next_forest);
     std::thread::sleep(sleep_duration);
   }
 }
@@ -124,7 +133,7 @@ fn heat_neighbors(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], y: usize, 
   }
 }
 
-fn print_forest(forest: &mut [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], generation: u32) {
+fn print_forest(forest:  [[Tile; FOREST_WIDTH]; FOREST_HEIGHT], generation: u32) {
   let mut writer = BufWriter::new(io::stdout());
   clear_screen(&mut writer);
   writeln!(writer, "Generation: {}", generation + 1).unwrap();
