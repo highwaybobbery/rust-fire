@@ -37,11 +37,11 @@ const GROW_PROB: f32 = 0.01;
 const INITIAL_TREE_PROB: f32 = 0.5;
 const FIRE_PROB: f32 = 0.001;
 
-const FOREST_WIDTH: usize = 90;
-const FOREST_HEIGHT: usize = 45;
+const FOREST_WIDTH: usize = 60;
+const FOREST_HEIGHT: usize = 30;
 
 const MAX_GENERATIONS: u32 = 1000;
-const SLEEP_MILLIS: u64 = 5;
+const SLEEP_MILLIS: u64 = 25;
 
 use std::fmt;
 use std::io;
@@ -58,40 +58,37 @@ use State::{Empty, Tree, Burning, Heating};
 fn main() {
   let sleep_duration = Duration::from_millis(SLEEP_MILLIS);
 
-  let mut forest_1 = [[ Tile { coords: Point { x: 0, y: 0 }, state: Empty } ; FOREST_WIDTH]; FOREST_HEIGHT];
-  let mut forest_2 = [[ Tile { coords: Point { x: 0, y: 0 }, state: Empty } ; FOREST_WIDTH]; FOREST_HEIGHT];
+  let mut forest = [[ Tile { coords: Point { x: 0, y: 0 }, state: Empty } ; FOREST_WIDTH]; FOREST_HEIGHT];
 
-  generate_forest(&mut forest_1);
+  prepopulate_forest(&mut forest);
 
-  print_forest(forest_1, 0);
+  print_forest(forest, 0);
 
-  let mut current_forest = &mut forest_1;
-  let mut next_forest = &mut forest_2;
+  std::thread::sleep(sleep_duration);
 
   for generation in 1..MAX_GENERATIONS {
 
-    for x in 0..FOREST_WIDTH {
-      for y in 0..FOREST_HEIGHT {
-        next_forest[y][x].state = update_tree(current_forest[y][x]);
+    for row in forest.iter_mut() {
+      for tile in row.iter_mut() {
+        update_tile(tile);
       }
     }
 
-    for x in 0..FOREST_WIDTH {
-      for y in 0..FOREST_HEIGHT {
-        if next_forest[y][x].state == Burning {
-          heat_neighbors(&mut next_forest, y, x);
+    for y in 0..FOREST_HEIGHT {
+      for x in 0..FOREST_WIDTH {
+        if forest[y][x].state == Burning {
+          heat_neighbors(&mut forest, y, x);
         }
       }
     }
 
-    print_forest(*next_forest, generation);
+    print_forest(forest, generation);
 
-    std::mem::swap(&mut current_forest, &mut next_forest);
     std::thread::sleep(sleep_duration);
   }
 }
 
-fn generate_forest(forest: &mut [[ Tile; FOREST_WIDTH]; FOREST_HEIGHT]) {
+fn prepopulate_forest(forest: &mut [[ Tile; FOREST_WIDTH]; FOREST_HEIGHT]) {
   for row in forest.iter_mut() {
     for tile in row.iter_mut() {
       tile.state = if prob_check(INITIAL_TREE_PROB) { Tree } else { Empty } ;
@@ -99,8 +96,8 @@ fn generate_forest(forest: &mut [[ Tile; FOREST_WIDTH]; FOREST_HEIGHT]) {
   }
 }
 
-fn update_tree(tree: Tile) -> State{
-  match tree.state {
+fn update_tile(tile: &mut Tile){
+  tile.state = match tile.state {
     Empty => {
       if prob_check(GROW_PROB) == true {
         Tree
